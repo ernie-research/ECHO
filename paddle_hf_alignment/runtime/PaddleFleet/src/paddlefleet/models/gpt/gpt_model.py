@@ -1,0 +1,1107 @@
+# Copyright (c) 2025 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from __future__ import annotations
+
+import logging
+import warnings
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from paddle.distributed.fleet.meta_parallel import (
+    LayerDesc,
+    PipelineLayer,
+    SharedLayerDesc,
+    dict_to_tuple_helper,
+)
+
+if TYPE_CHECKING:
+    from paddle.distributed.fleet.meta_parallel import LayerSpec
+
+
+from paddle.distributed import fleet
+from paddle.distributed.fleet.meta_parallel import ScheduleChunk
+
+from paddlefleet.models.gpt.gpt_embedding import GPTEmbedding
+from paddlefleet.models.gpt.lm_head import GPTLMHead
+from paddlefleet.transformer.multi_token_prediction import (
+    MultiTokenPredictionLayer,
+)
+from paddlefleet.transformer.transformer_layer import (
+    TransformerLayer,
+    TransformerLayerNode,
+    TransformerLayerOverlappedScheduleNode,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def build_overlapped_nodes(forward_chunk, backward_chunk):
+    """Build overlapped nodes for TransformerLayer."""
+    overlap_element_class = TransformerLayerNode
+    forward_decoder_layer_num = 0
+    backward_decoder_layer_num = 0
+
+    assert isinstance(forward_chunk, ScheduleChunk) and isinstance(
+        backward_chunk, ScheduleChunk
+    )
+    for n in forward_chunk.nodes:
+        if isinstance(n, overlap_element_class):
+            forward_decoder_layer_num += 1
+    for n in reversed(backward_chunk.nodes):
+        if isinstance(n, overlap_element_class):
+            backward_decoder_layer_num += 1
+
+    overlap_layers_num = min(
+        forward_decoder_layer_num, backward_decoder_layer_num
+    )
+
+    # construct forward pre- and post-chunks
+    forward_pre_layers = []
+    forward_post_layers = []
+    forward_overlap_layers = []
+    is_pre = True
+    for n in forward_chunk.nodes:
+        if not isinstance(n, overlap_element_class):
+            if is_pre:
+                forward_pre_layers.append(n)
+            else:
+                forward_post_layers.append(n)
+        else:
+            is_pre = False
+            if len(forward_overlap_layers) == overlap_layers_num:
+                forward_post_layers.append(n)
+            else:
+                forward_overlap_layers.append(n)
+
+    forward_pre_node = ScheduleChunk(forward_pre_layers)
+    forward_post_node = ScheduleChunk(forward_post_layers)
+
+    # construct backward pre- and post-chunks
+    backward_pre_layers = []
+    backward_post_layers = []
+    backward_overlap_layers = []
+    is_pre = True
+    for n in reversed(backward_chunk.nodes):
+        if not isinstance(n, overlap_element_class):
+            if is_pre:
+                backward_pre_layers.append(n)
+            else:
+                backward_post_layers.append(n)
+        else:
+            is_pre = False
+            if len(backward_overlap_layers) == overlap_layers_num:
+                backward_post_layers.append(n)
+            else:
+                backward_overlap_layers.append(n)
+
+    backward_pre_node = ScheduleChunk(list(reversed(backward_pre_layers)))
+    backward_post_node = ScheduleChunk(list(reversed(backward_post_layers)))
+
+    # construct overlap chunk
+    overlap_node = ScheduleChunk(
+        [
+            TransformerLayerOverlappedScheduleNode(forward_node, backward_node)
+            for forward_node, backward_node in zip(
+                forward_overlap_layers, backward_overlap_layers
+            )
+        ]
+    )
+    return (
+        forward_pre_node,
+        backward_pre_node,
+        overlap_node,
+        forward_post_node,
+        backward_post_node,
+    )
+
+
+@dataclass
+class GPTSublayersSpec:
+    """p
+    The dataclass for LayerSpecs of GPT sublayers_spec
+    including embedding, n * transformer_layer, mtp, lm_head.
+    """
+
+    embedding: LayerSpec | None = None
+    head_empty_layers: list[LayerSpec] | None = None
+    mhc_expand: LayerSpec | None = None
+    transformer_layers: list[LayerSpec] | None = None
+    mhc_contract: LayerSpec | None = None
+    tail_empty_layers: list[LayerSpec] | None = None
+    mtp: list[LayerSpec] | None = None
+    mtp_embedding: LayerSpec | None = None
+    layer_norm: LayerSpec | None = None
+    lm_head: LayerSpec | None = None
+    mtp_lm_head: LayerDesc | None = None
+    mtp_loss: LayerDesc | None = None
+
+
+class GPTModel(PipelineLayer):
+    """GPT Transformer language model.
+
+    Args:
+        gpt_layer_desc:
+    """
+
+    def __init__(
+        self,
+        sublayers_spec: GPTSublayersSpec,
+        **kwargs,
+    ) -> None:
+        self.config = kwargs["config"]
+        tie_word_embeddings = (
+            kwargs["tie_word_embeddings"]
+            and self.config.pipeline_model_parallel_size > 1
+        )
+        skip_weight_param_allocation = (
+            self.config.tie_word_embeddings
+            and self.config.pipeline_model_parallel_size == 1
+        )
+        self._pipeline_name_mapping = None
+        self._pp_to_single_mapping = None
+        self._sequential_layers = self.get_layer_desc_list(
+            sublayers_spec,
+            tie_word_embeddings,
+        )
+        self.layers = self.get_sequential_layers()
+        del kwargs["tie_word_embeddings"]
+        del kwargs["config"]
+
+        topology = (
+            None
+            if self.config.pipeline_model_parallel_size == 1
+            else fleet.get_hybrid_communicate_group().topology()
+        )
+
+        super().__init__(
+            layers=self.layers,
+            topology=topology,
+            num_virtual_pipeline_stages=self.config.virtual_pipeline_model_parallel_size,
+            **kwargs,
+        )
+
+        if skip_weight_param_allocation:
+            shared_embed_weight = None
+            for layer in self.run_function:
+                if isinstance(layer, GPTEmbedding):
+                    shared_embed_weight = layer.embedding_weight
+                if isinstance(layer, GPTLMHead):
+                    layer.weight = shared_embed_weight
+
+        # MTP parameter reuse: alias each MultiTokenPredictionLayer's
+        # transformer_layer parameters to the last backbone TransformerLayer's
+        # parameters on this PP rank (Option A — parameter-level aliasing,
+        # NOT module reference replacement, so the LayerDesc tree is preserved
+        # and checkpoint save via AOA still emits per-MTP keys).
+        if getattr(self.config, "mtp_reuse_last_layer", False):
+            self._alias_mtp_to_last_backbone_layer()
+
+        # [MTP-FUSION-SHARE] Optionally collapse the per-depth fusion modules
+        # (enorm, hnorm, eh_proj, self.norm) so depths 1..D-1 share the same
+        # Parameter objects as depth 0. Gated on mtp_share_fusion_modules and
+        # only meaningful when mtp_reuse_last_layer is also True (enforced in
+        # TransformerConfig.__post_init__). Runs after the body-aliasing step
+        # so any failures there are visible first.
+        if getattr(self.config, "mtp_share_fusion_modules", False):
+            self._alias_mtp_fusion_modules()
+
+        # [MTP-KV-CACHE] Attach the rank-local cross-depth K/V chain to every
+        # MTP layer's attention and mark the first depth (which resets the chain
+        # each forward). Used by both "chain" (EAGLE diagonal) and "anchor"
+        # (GLM-5.2 KVShare) modes. No-op when mtp_kv_cache_mode is None.
+        if getattr(self.config, "mtp_kv_cache_mode", None) in (
+            "chain",
+            "anchor",
+        ):
+            self._setup_mtp_kv_chain()
+
+    def _alias_mtp_to_last_backbone_layer(self):
+        """Replace parameters of every MultiTokenPredictionLayer.transformer_layer
+        on this PP rank with the corresponding parameters of the last backbone
+        TransformerLayer on the same rank.
+
+        Cross-stage aliasing is NOT supported (would need SharedLayerDesc); in
+        that case this is a no-op on the rank that lacks the backbone-last
+        layer, and a clear warning is emitted so operators can grep the log.
+
+        Grep tags:
+          [MTP-REUSE-LAST-LAYER-CONFIRM]   alias succeeded for one MTP depth
+          [MTP-REUSE-LAST-LAYER-SKIP]      stage lacks one of the two endpoints
+          [MTP-REUSE-LAST-LAYER-WARN]      partial / shape-mismatched alias
+        """
+        last_backbone = None
+        mtp_layers = []
+        for layer in self.run_function:
+            if isinstance(layer, TransformerLayer):
+                last_backbone = layer
+            elif isinstance(layer, MultiTokenPredictionLayer):
+                mtp_layers.append(layer)
+
+        if last_backbone is None or not mtp_layers:
+            warnings.warn(
+                "[MTP-REUSE-LAST-LAYER-SKIP] not applied on this PP rank: "
+                f"has_last_backbone={last_backbone is not None}, "
+                f"num_mtp_layers={len(mtp_layers)}. If pipeline_model_parallel_size>1 "
+                "and backbone-last and MTP are on different stages, parameter-level "
+                "aliasing cannot bridge stages — use SharedLayerDesc instead."
+            )
+            return
+
+        src_params = dict(last_backbone.named_parameters())
+
+        # Defensive check: with mtp_reuse_last_layer=True, TransformerConfig's
+        # __post_init__ force-sets use_dense_mtp=False so the MTP layer mirrors
+        # whatever the backbone-last layer is. This assert just guards against
+        # someone bypassing __post_init__ (e.g. mutating the config after init).
+        backbone_is_moe = any(
+            (".experts." in n)
+            or ("experts." in n)
+            or (".router." in n)
+            or ("router." in n)
+            for n in src_params
+        )
+        assert not (
+            backbone_is_moe and getattr(self.config, "use_dense_mtp", False)
+        ), (
+            "[MTP-REUSE-LAST-LAYER] use_dense_mtp must be False when "
+            "mtp_reuse_last_layer=True (TransformerConfig.__post_init__ enforces "
+            "this). Backbone-last is MoE, MTP cannot be dense."
+        )
+
+        for mtp in mtp_layers:
+            dst_module = mtp.transformer_layer
+            dst_named = list(dst_module.named_parameters())
+            aliased = 0
+            shape_mismatch = 0
+            missing = 0
+            for dotted_name, dst_param in dst_named:
+                src_param = src_params.get(dotted_name)
+                if src_param is None:
+                    missing += 1
+                    continue
+                if tuple(src_param.shape) != tuple(dst_param.shape):
+                    shape_mismatch += 1
+                    continue
+                # Walk to the parent submodule and overwrite the entry in its
+                # _parameters dict so the Parameter object identity is shared.
+                parts = dotted_name.split(".")
+                owner = dst_module
+                for p in parts[:-1]:
+                    owner = getattr(owner, p)
+                attr_name = parts[-1]
+                if attr_name in owner._parameters:
+                    owner._parameters[attr_name] = src_param
+                else:
+                    setattr(owner, attr_name, src_param)
+                aliased += 1
+
+            total = len(dst_named)
+            tag = "[MTP-REUSE-LAST-LAYER-CONFIRM]"
+            if missing or shape_mismatch:
+                tag = "[MTP-REUSE-LAST-LAYER-WARN]"
+            warnings.warn(
+                f"{tag} mtp_layer_number={mtp.layer_number} "
+                f"aliased={aliased}/{total} params to last backbone TransformerLayer "
+                f"(missing_in_backbone={missing}, shape_mismatch={shape_mismatch}). "
+                "missing/shape_mismatch>0 typically means use_dense_mtp=True "
+                "while backbone-last is MoE — set use_dense_mtp=False to fully reuse."
+            )
+
+    def _alias_mtp_fusion_modules(self):
+        """Alias the per-depth fusion modules (enorm, hnorm, eh_proj, self.norm)
+        of MTP depths 1..D-1 to depth 0's, on this PP rank.
+
+        Why this exists
+        ---------------
+        Milestone-A (_alias_mtp_to_last_backbone_layer) already shares the
+        transformer body across MTP depths. The four fusion-side modules around
+        it are still per-depth, costing (D-1) extra copies of each. This helper
+        is the eagle / GLM-5.1+5.2 recipe of "parameters of different MTP steps
+        are shared".
+
+        Approach: parameter-level aliasing, same pattern as
+        _alias_mtp_to_last_backbone_layer. Each acceptor depth's module keeps
+        its own nn.Layer object — only the Parameter entries in its
+        _parameters dict are replaced with depth-0's. Therefore the LayerDesc
+        tree is preserved and AOA still emits per-MTP checkpoint keys (loading
+        semantics: depth-0 keys win since all D pointers reference the same
+        Parameter; depth-{1..D-1} reads overwrite, with the last load winning).
+
+        Constraints
+        -----------
+        - Only fusion modules. Body is handled by the existing helper.
+        - mHC mode (enable_hyper_connections=True) uses e_proj/h_proj instead
+          of eh_proj. Both are aliased; eh_proj is skipped on mHC. Mode mismatch
+          across MTP depths emits [MTP-FUSION-SHARE-WARN].
+        - Cross-PP-stage aliasing not supported (rank-local). Emits
+          [MTP-FUSION-SHARE-SKIP] when this rank has <2 MTP layers.
+        - gpt_model_use_experimental_version=True path: self.norm is conditionally
+          built (see MultiTokenPredictionLayer.__init__ L415). If absent on the
+          donor, "norm" is skipped silently — not a warning, this is the
+          documented experimental-version behavior.
+
+        Grep tags
+        ---------
+        [MTP-FUSION-SHARE-CONFIRM]   one per acceptor per module on success
+        [MTP-FUSION-SHARE-SKIP]      this rank lacks two or more MTP layers
+        [MTP-FUSION-SHARE-WARN]      shape mismatch / mHC mode mismatch
+        """
+        mtp_layers = [
+            layer
+            for layer in self.run_function
+            if isinstance(layer, MultiTokenPredictionLayer)
+        ]
+
+        if len(mtp_layers) < 2:
+            print(
+                f"[MTP-FUSION-SHARE-SKIP] not applied on this PP rank: "
+                f"num_mtp_layers={len(mtp_layers)} (<2). If "
+                f"pipeline_model_parallel_size>1 and MTP depths land on "
+                f"different stages, parameter-level aliasing cannot bridge "
+                f"stages.",
+                flush=True,
+            )
+            return
+
+        donor = mtp_layers[0]
+        donor_mhc = bool(getattr(donor, "mhc_enabled", False))
+
+        # The four fusion-side module attrs. Note: in mHC mode, the codebase
+        # uses e_proj / h_proj instead of eh_proj (see MultiTokenPredictionLayer
+        # __init__ L329-355). We handle both shapes here.
+        if donor_mhc:
+            module_attrs = ["enorm", "hnorm", "e_proj", "h_proj", "norm"]
+        else:
+            module_attrs = ["enorm", "hnorm", "eh_proj", "norm"]
+
+        for acceptor in mtp_layers[1:]:
+            acceptor_mhc = bool(getattr(acceptor, "mhc_enabled", False))
+            if acceptor_mhc != donor_mhc:
+                warnings.warn(
+                    f"[MTP-FUSION-SHARE-WARN] mhc mode mismatch: "
+                    f"donor_depth={donor.layer_number} mhc={donor_mhc} vs "
+                    f"acceptor_depth={acceptor.layer_number} "
+                    f"mhc={acceptor_mhc}. Skipping acceptor."
+                )
+                continue
+            for attr in module_attrs:
+                donor_mod = getattr(donor, attr, None)
+                acceptor_mod = getattr(acceptor, attr, None)
+                if donor_mod is None and acceptor_mod is None:
+                    # Both depths lack this module (e.g. norm absent on the
+                    # experimental dataflow path). No-op.
+                    continue
+                if donor_mod is None or acceptor_mod is None:
+                    warnings.warn(
+                        f"[MTP-FUSION-SHARE-WARN] module='{attr}' presence "
+                        f"mismatch: donor_has={donor_mod is not None} "
+                        f"acceptor_depth={acceptor.layer_number} "
+                        f"acceptor_has={acceptor_mod is not None}. Skipping."
+                    )
+                    continue
+
+                donor_params = dict(donor_mod.named_parameters())
+                acceptor_named = list(acceptor_mod.named_parameters())
+                aliased = 0
+                shape_mismatch = 0
+                missing = 0
+                for dotted_name, dst_param in acceptor_named:
+                    src_param = donor_params.get(dotted_name)
+                    if src_param is None:
+                        missing += 1
+                        continue
+                    if tuple(src_param.shape) != tuple(dst_param.shape):
+                        shape_mismatch += 1
+                        continue
+                    # Walk to the parent submodule and overwrite the entry in
+                    # its _parameters dict so the Parameter object identity is
+                    # shared. Same mechanism as
+                    # _alias_mtp_to_last_backbone_layer (L277-288).
+                    parts = dotted_name.split(".")
+                    owner = acceptor_mod
+                    for p in parts[:-1]:
+                        owner = getattr(owner, p)
+                    attr_name = parts[-1]
+                    if attr_name in owner._parameters:
+                        owner._parameters[attr_name] = src_param
+                    else:
+                        setattr(owner, attr_name, src_param)
+                    aliased += 1
+
+                total = len(acceptor_named)
+                tag = (
+                    "[MTP-FUSION-SHARE-WARN]"
+                    if (missing or shape_mismatch)
+                    else "[MTP-FUSION-SHARE-CONFIRM]"
+                )
+                print(
+                    f"{tag} donor_depth={donor.layer_number} "
+                    f"acceptor_depth={acceptor.layer_number} module='{attr}' "
+                    f"aliased={aliased}/{total} "
+                    f"(missing={missing}, shape_mismatch={shape_mismatch})",
+                    flush=True,
+                )
+
+    def _get_weight_only_params(self):
+        """Get all parameters marked with is_weight_only_mtp flag."""
+        return [
+            param
+            for param in self.state_dict().values()
+            if getattr(param, "is_weight_only_mtp", False)
+        ]
+
+    def _setup_mtp_kv_chain(self):
+        """Attach a single rank-local MTPKVChain to every MTP layer's attention
+        on this PP rank, for mtp_kv_cache_mode in {"chain","anchor"}.
+
+        All MTP depths on this rank share ONE chain buffer (so depth d can read
+        depths 0..d-1's K/V; "anchor" mode reads only depth 0). The first MTP
+        layer (lowest layer_number) is marked to reset the chain at the start
+        of each forward.
+
+        Constraints (asserted): standard RoPE only (no MRoPE / rope_freqs_cis /
+        fused), non-mHC, no full-recompute on MTP, single PP rank (all MTP
+        depths present here). Cross-PP-stage chains would need P2P transport
+        and are out of scope.
+
+        Grep tags:
+          [MTP-KV-CACHE-CONFIRM]  chain attached, logs mode + depths
+          [MTP-KV-CACHE-SKIP]     this rank lacks two or more MTP layers
+          [MTP-KV-CACHE-WARN]     a constraint is violated (asserts follow)
+        """
+        from paddlefleet.transformer.mtp_kv_chain import MTPKVChain
+
+        _mode = getattr(self.config, "mtp_kv_cache_mode", None)
+
+        mtp_layers = [
+            layer
+            for layer in self.run_function
+            if isinstance(layer, MultiTokenPredictionLayer)
+        ]
+        if len(mtp_layers) < 2:
+            print(
+                f"[MTP-KV-CACHE-SKIP] mtp_kv_cache_mode={_mode!r} not applied: "
+                f"this PP rank has {len(mtp_layers)} MTP layer(s) (<2). Chain "
+                f"requires all MTP depths on one rank; cross-stage chains are "
+                f"not supported.",
+                flush=True,
+            )
+            return
+
+        # Defensive constraint checks (v1 scope).
+        assert not getattr(self.config, "enable_hyper_connections", False), (
+            f"[MTP-KV-CACHE-WARN] mtp_kv_cache_mode={_mode!r} does not support "
+            "mHC (enable_hyper_connections=True) in v1."
+        )
+        assert not (
+            self.config.gpt_model_use_experimental_version
+        ), (
+            f"[MTP-KV-CACHE-WARN] mtp_kv_cache_mode={_mode!r} supports only the "
+            "standard RoPE path; gpt_model_use_experimental_version uses "
+            "complex 3D MRoPE which is not yet handled."
+        )
+        if self.config.recompute_granularity == "full":
+            raise AssertionError(
+                f"[MTP-KV-CACHE-WARN] mtp_kv_cache_mode={_mode!r} is "
+                "incompatible with recompute_granularity='full' (the "
+                "cross-depth chain buffer is corrupted by activation "
+                "recompute). Disable full recompute on MTP layers or set "
+                "mtp_kv_cache_mode=None."
+            )
+
+        chain = MTPKVChain()
+        # Per-depth chain window: max number of prior MTP depths a query may
+        # look back across (SWA over the diagonal columns). Derived from
+        # mtp_window_size: an int W -> keep W prior depths; None -> all.
+        raw_window = getattr(self.config, "mtp_window_size", None)
+        if isinstance(raw_window, int):
+            chain_window = raw_window
+        elif isinstance(raw_window, (tuple, list)) and len(raw_window) == 2 and all(
+            isinstance(x, int) for x in raw_window
+        ):
+            chain_window = raw_window[0]
+        else:
+            chain_window = None
+        mtp_layers_sorted = sorted(mtp_layers, key=lambda m: m.layer_number)
+        for i, mtp in enumerate(mtp_layers_sorted):
+            self_attn = getattr(mtp.transformer_layer, "self_attn", None)
+            assert self_attn is not None, (
+                "[MTP-KV-CACHE-WARN] MTP transformer_layer has no self_attn; "
+                "cannot attach chain."
+            )
+            self_attn._mtp_kv_chain = chain
+            self_attn._mtp_chain_is_first_depth = i == 0
+            self_attn._mtp_chain_window = chain_window
+
+        print(
+            f"[MTP-KV-CACHE-CONFIRM] mode={_mode} attached shared chain to "
+            f"{len(mtp_layers_sorted)} MTP depths "
+            f"(layer_numbers={[m.layer_number for m in mtp_layers_sorted]}); "
+            f"chain_window={chain_window} (max prior depths per query; "
+            f"None=all; ignored when mode=anchor); first-depth resets chain "
+            f"each forward.",
+            flush=True,
+        )
+    # ========================================
+    def offload_weight_only_params(self):
+        """Offload all weight-only MTP parameters to CPU pinned memory."""
+        for param in self._get_weight_only_params():
+            if param.place.is_gpu_place():
+                cpu_param = param.pin_memory()
+                cpu_param._share_buffer_to(param)
+
+    def reload_weight_only_params(self):
+        """Reload weight-only MTP parameters from CPU pinned memory back to GPU."""
+        for param in self._get_weight_only_params():
+            if not param.place.is_gpu_place():
+                gpu_param = param.cuda()
+                gpu_param._share_buffer_to(param)
+
+    def get_layer_desc_list(self, spec, tie_word_embeddings):
+        layers = []
+        model_type = getattr(self.config, "model_type", "")
+        if "qwen3_vl" in model_type or "qwen3_5" in model_type:
+            name_prefix = "model.language_model"
+        else:
+            name_prefix = "model"
+        if tie_word_embeddings:
+            self.add_sequential_layer(
+                layers,
+                SharedLayerDesc(
+                    "embed",
+                    spec.embedding,
+                    shared_weight_attr="embedding_weight",
+                ),
+                name_prefix,
+            )
+        elif self.config.enable_mtp_magic_send:
+            # MTP magic send: share embedding weight between GPTEmbedding (first stage)
+            # and MTPEmbeddingLayer (last stage) via SharedLayerDesc broadcast mechanism.
+            self.add_sequential_layer(
+                layers,
+                SharedLayerDesc(
+                    "mtp_embed",
+                    spec.embedding,
+                    shared_weight_attr="embedding_weight",
+                ),
+                name_prefix,
+            )
+        else:
+            self.add_sequential_layer(
+                layers, LayerDesc(spec.embedding), name_prefix
+            )
+        i = 0
+        for head_empty_layer in spec.head_empty_layers:
+            self.add_sequential_layer(
+                layers, LayerDesc(head_empty_layer), f"{name_prefix}.layers.{i}"
+            )
+            i += 1
+
+        if spec.mhc_expand is not None:
+            self.add_sequential_layer(
+                layers, LayerDesc(spec.mhc_expand), f"{name_prefix}.mhc_expand"
+            )
+
+        for transformer_layer_spec in spec.transformer_layers:
+            self.add_sequential_layer(
+                layers,
+                LayerDesc(transformer_layer_spec),
+                f"{name_prefix}.layers.{i}",
+            )
+            i += 1
+
+        if spec.mhc_contract is not None:
+            self.add_sequential_layer(
+                layers,
+                LayerDesc(spec.mhc_contract),
+                f"{name_prefix}.mhc_contract",
+            )
+
+        # Always place layer_norm after transformer_layers and before tail_empty_layers/MTP,
+        # so that the model structure is consistent regardless of whether MTP is enabled.
+        if not (
+            self.config.gpt_model_use_experimental_version
+            and self.config.num_nextn_predict_layers >= 1
+        ):
+            self.add_sequential_layer(
+                layers, LayerDesc(spec.layer_norm), name_prefix
+            )
+
+        if spec.mtp:
+            # MTP magic send: MTPEmbeddingLayer shares weight with GPTEmbedding
+            # via SharedLayerDesc("mtp_embed") broadcast mechanism.
+            if spec.mtp_embedding:
+                self.add_sequential_layer(
+                    layers,
+                    SharedLayerDesc(
+                        "mtp_embed",
+                        spec.mtp_embedding,
+                        shared_weight_attr="embedding_weight",
+                    ),
+                    f"{name_prefix}.mtp_embedding",
+                )
+            for mtp_spec in spec.mtp:
+                self.add_sequential_layer(
+                    layers, LayerDesc(mtp_spec), f"{name_prefix}.layers.{i}"
+                )
+                i += 1
+
+        if spec.mtp_lm_head:
+            self.add_sequential_layer(
+                layers,
+                SharedLayerDesc(
+                    "embed",
+                    spec.mtp_lm_head,
+                    shared_weight_attr="embedding_weight",
+                ),
+                f"{name_prefix}.shared_mtp_lm_head",
+            )
+        if spec.mtp_loss:
+            self.add_sequential_layer(
+                layers, LayerDesc(spec.mtp_loss), f"{name_prefix}.mtp_loss"
+            )
+
+        for tail_empty_layer in spec.tail_empty_layers:
+            self.add_sequential_layer(
+                layers, LayerDesc(tail_empty_layer), f"{name_prefix}.layers.{i}"
+            )
+            i += 1
+
+        if (
+            self.config.gpt_model_use_experimental_version
+            and self.config.num_nextn_predict_layers >= 1
+        ):
+            self.add_sequential_layer(
+                layers, LayerDesc(spec.layer_norm), name_prefix
+            )
+        if tie_word_embeddings or spec.mtp_lm_head:
+            self.add_sequential_layer(
+                layers,
+                SharedLayerDesc(
+                    "embed",
+                    spec.lm_head,
+                    shared_weight_attr="embedding_weight",
+                ),
+                f"{name_prefix}.shared_head",
+            )
+        else:
+            self.add_sequential_layer(
+                layers, LayerDesc(spec.lm_head), f"{name_prefix}.lm_head"
+            )
+
+        return layers
+
+    def overlapped_forward_backward(
+        self,
+        forward_chunk,
+        forward_inputs,
+        forward_loss_fn_node,
+        backward_chunk,
+        backward_loss_fn_node,
+        backward_input_grads,
+        scaler,
+        p2p_async_handle,
+    ):
+        if backward_loss_fn_node is not None:
+            if scaler:
+                backward_input_grads = backward_loss_fn_node.backward(
+                    scaler=scaler
+                )
+            else:
+                backward_input_grads = backward_loss_fn_node.backward()
+
+        (
+            forward_pre_node,
+            backward_pre_node,
+            overlap_node,
+            forward_post_node,
+            backward_post_node,
+        ) = build_overlapped_nodes(forward_chunk, backward_chunk)
+
+        if len(overlap_node.nodes) > 0:
+            assert not any(
+                isinstance(node, TransformerLayerNode)
+                for node in overlap_node.nodes
+            )
+            # origin assert, why ?
+            # assert not any(
+            #     isinstance(node, TransformerLayerNode)
+            #     for node in forward_post_node.nodes
+            # )
+            # assert not any(
+            #     isinstance(node, TransformerLayerNode)
+            #     for node in backward_post_node.nodes
+            # )
+
+        if p2p_async_handle is not None:
+            p2p_async_handle.forward_handle_wait()
+            p2p_async_handle.backward_handle_wait()
+
+        forward_inputs = forward_pre_node.forward(forward_inputs)
+        backward_input_grads = backward_pre_node.backward(backward_input_grads)
+
+        for i, node in enumerate(overlap_node.nodes):
+            forward_inputs, backward_input_grads = node.forward_backward(
+                forward_inputs,
+                backward_input_grads,
+                # split_bw=(i == len(overlap_node.nodes) - 1),
+            )
+
+        forward_inputs = forward_post_node.forward(forward_inputs)
+        backward_input_grads = backward_post_node.backward(backward_input_grads)
+
+        # forward_inputs = forward_chunk.forward(forward_inputs)
+
+        if p2p_async_handle is not None:
+            forward_inputs = dict_to_tuple_helper(forward_inputs)
+            p2p_async_handle.forward_async_comm(forward_inputs)
+            p2p_async_handle.backward_async_comm(backward_input_grads)
+
+        # backward_input_grads = backward_chunk.backward(backward_input_grads)
+
+        # used for bw split
+        # if len(overlap_node.nodes) > 0:
+        #     WeightGradStore.pop()
+        #     assert WeightGradStore.funcs_queue.empty()
+
+        if forward_loss_fn_node is not None:
+            forward_loss = forward_loss_fn_node.forward(forward_inputs)
+        else:
+            forward_loss = None
+
+        return forward_inputs, forward_loss, backward_input_grads
+
+    def get_hardware_flops(self):
+        return 989e3
+
+    def add_sequential_layer(self, layers, layer_desc, name_prefix=""):
+        """
+        Add a sequential layer to the network with specified description and name prefix.
+
+        Args:
+            layers (list): List to store layer descriptions. Each element should be a dict
+                with keys "layer" (LayerDesc) and "name_prefix" (str).
+            layer_desc (LayerDesc|SharedLayerDesc): Layer description object containing
+                layer self.configuration.
+            name_prefix (str, optional): Prefix for layer names in the pipeline.
+                Defaults to empty string.
+
+        Returns:
+            None: The layer description is appended to the input layers list.
+        """
+        layers.append({"layer": layer_desc, "name_prefix": name_prefix})
+
+    def get_sequential_layers(self):
+        """
+        Get all layers in the sequential network.
+
+        Returns:
+            List[paddle.nn.Layer]: List containing all layers.
+        """
+        return [x["layer"] for x in self._sequential_layers]
+
+    def get_sequential_name_prefixes(self):
+        """
+        Retrieve name prefixes for all parallel layers in the sequential network.
+
+        Returns:
+            Dict[str, str]: A dictionary mapping layer indices (as strings) to their
+                corresponding name prefixes. The indices represent the position of
+                each layer in the sequential order.
+        """
+        return {
+            str(index): x["name_prefix"]
+            for index, x in enumerate(self._sequential_layers)
+        }
+
+    def get_shardlayer_prefix(self, name_splited):
+        """_summary_
+            This function retrieves the prefix of a shared layer. The process involves:
+            1. Identifying all key names of shared layers, like 'shared_weight01', 'shared_weight02', etc.
+            2. For instance, given name_splited = ['shared_layers', 'shared_weight01', 'weight'],
+                the 'shared_layer_key' would be name_splited[1], which is 'shared_weight01'.
+            3. By traversing through all layers, the function checks if the specified
+                shared_layer is present in the current stage. If found, it returns the corresponding prefix.
+
+            Note: For retrieving all SharedLayer instances in Paddle, you can refer to the following Paddle code.
+            https://github.com/PaddlePaddle/Paddle/blob/2cf724d055679a1a0e48766dfb1708b920273078/python/paddle/distributed/fleet/meta_parallel/parallel_layers/pp_layers.py#L460-L513
+        Args:
+            name_splited (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        shared_layer_names = {
+            s.layer_name for s in self.layers if isinstance(s, SharedLayerDesc)
+        }
+        assert name_splited[1] in shared_layer_names, (
+            f"The shared layer name {name_splited[1]} must be in prefixes!"
+        )
+        shared_layer_key = name_splited[1]
+        for idx, layer in enumerate(self.layers):
+            if (
+                isinstance(layer, SharedLayerDesc)
+                and layer.layer_name == shared_layer_key
+            ):
+                if self.get_stage_from_index(idx) == self._stage_id:
+                    return self.get_sequential_name_prefixes()[str(idx)]
+
+        # the prefix must be in the current stage, else raise error
+        raise ValueError(
+            f"The shared layer {shared_layer_key} must be in the current stage!"
+        )
+
+    def _set_pipeline_name_mapping(self, mappings=None):
+        """
+        Set the name mapping for pipeline.
+
+        Args:
+            mappings (dict, optional): Dictionary storing name mapping relationships. Default is None, meaning no mapping operation.
+
+        Returns:
+            dict: Returns the updated or existing mapping relationship.
+
+        """
+        if mappings is not None:
+            self._pipeline_name_mapping = mappings
+        else:
+            single_to_pp_mapping = {}
+            pp_to_single_mapping = {}
+
+            state_dict_keys = list(super().state_dict().keys())
+            first_key = ""
+            for k in state_dict_keys:
+                if "shared_layers" not in k:
+                    first_key = k
+                    break
+            first_key = first_key.split(".")
+            # if use virtual pp_degree, the prefix is like 0.0.xxx
+            # else it will be like 0.xxx
+            use_virtual_pp_degree = (
+                first_key[0].isdigit() and first_key[1].isdigit()
+            )
+
+            prefixes = self.get_sequential_name_prefixes()
+            for k in state_dict_keys:
+                name_splited = k.split(".")
+                if use_virtual_pp_degree:
+                    if name_splited[0].isdigit():
+                        if name_splited[1].isdigit():
+                            idx = str(
+                                int(name_splited[0]) + int(name_splited[1])
+                            )
+                            single_name = [prefixes[idx]]
+                            single_name.extend(name_splited[2:])
+                        else:
+                            single_name = [prefixes[str(len(prefixes) - 1)]]
+                            single_name.extend(name_splited[2:])
+                            logger.warning(
+                                f"Please check! we treat this key as last layer, get {k}, \
+                                        set origin name as {'.'.join(single_name)}"
+                            )
+                    elif name_splited[0] == "shared_layers":
+                        single_name = [self.get_shardlayer_prefix(name_splited)]
+                        single_name.extend(name_splited[2:])
+                    else:
+                        single_to_pp_mapping[k] = k
+                        pp_to_single_mapping[k] = k
+                        continue
+                else:
+                    idx = name_splited[0]
+                    # for normal pp layer
+                    if idx.isdigit():
+                        # allow empty prefix
+                        single_name = (
+                            [] if prefixes[idx] == "" else [prefixes[idx]]
+                        )
+                        single_name.extend(name_splited[1:])
+                    elif idx == "shared_layers":
+                        single_name = [self.get_shardlayer_prefix(name_splited)]
+                        single_name.extend(name_splited[2:])
+                    else:
+                        single_to_pp_mapping[k] = k
+                        pp_to_single_mapping[k] = k
+                        continue
+
+                single_to_pp_mapping[".".join(single_name)] = k
+                pp_to_single_mapping[k] = ".".join(single_name)
+
+            self._pipeline_name_mapping = single_to_pp_mapping
+            self._pp_to_single_mapping = pp_to_single_mapping
+
+        return self._pipeline_name_mapping
+
+    def state_dict(self, *args, **kwargs):
+        """
+        Return a dictionary with Pipeline Stage mapping.
+        Args:
+            *args (tuple): Variable argument list passed to parent method.
+            **kwargs (dict): Optional keyword arguments passed to parent method.
+        Returns:
+            dict: Dictionary containing Pipeline Stage mapping.
+        """
+        state_dict = super().state_dict(*args, **kwargs)
+
+        model_type = getattr(self.config, "model_type", "")
+        if "qwen3_vl" in model_type or "qwen3_5" in model_type:
+            name_prefix = "model.language_model."
+        else:
+            name_prefix = ""
+        if self._pipeline_name_mapping is None:
+            self._set_pipeline_name_mapping()
+        # assert len(self._pipeline_name_mapping) > 0, "The pipeline stage must have parameters!"
+        for k in list(state_dict.keys()):
+            v = state_dict.pop(k)
+            if name_prefix and k.startswith(name_prefix):
+                k = k[len(name_prefix) :]
+            if k not in self._pp_to_single_mapping:
+                state_dict[k] = v
+                continue
+            v.key = self._pp_to_single_mapping[k]
+            state_dict[self._pp_to_single_mapping[k]] = v
+        return state_dict
+
+    def set_state_dict(self, state_dict, *args, **kwargs):
+        if self._pipeline_name_mapping is None:
+            self._set_pipeline_name_mapping()
+        assert len(self._pipeline_name_mapping) > 0, (
+            "The pipeline stage must have parameters!"
+        )
+
+        for k in list(state_dict.keys()):
+            v = state_dict.pop(k)
+            if k not in self._pipeline_name_mapping:
+                continue
+            state_dict[self._pipeline_name_mapping[k]] = v
+
+        ret = super().set_state_dict(state_dict, *args, **kwargs)
+        return ret
+
+    def _check_shared_model_state(self):
+        if self._pipeline_name_mapping is None:
+            self._set_pipeline_name_mapping()
+
+        super_state_dict = super().state_dict()
+        structure_name_to_tensor = {}
+        for k, v in super_state_dict.items():
+            k = self._pp_to_single_mapping[k]
+            if k not in structure_name_to_tensor:
+                structure_name_to_tensor[k] = v
+            else:
+                old_v = structure_name_to_tensor[k]
+                assert old_v is v, (
+                    f"Shared tensor with different structure name: {k}"
+                )
+
+        missing_shared_keys = {}
+        for k, v in self._pp_to_single_mapping.items():
+            mapped_k = self._pipeline_name_mapping[v]
+            if k != mapped_k:
+                missing_shared_keys[k] = mapped_k
+        return missing_shared_keys
+
+    def sharded_state_dict(self, *args, **kwargs):
+        """
+        sharded_state_dict method for PipelinePretrainedModel.
+
+        Remaps parameter keys according to the pipeline stage mapping, and converts expert indices from local to global.
+        """
+        sharded_state_dict = super().sharded_state_dict(*args, **kwargs)
+        if self._pipeline_name_mapping is None:
+            self._set_pipeline_name_mapping()
+
+        model_type = getattr(self.config, "model_type", "")
+        if "qwen3_vl" in model_type or "qwen3_5" in model_type:
+            name_prefix = "model.language_model."
+        else:
+            name_prefix = ""
+
+        for k in list(sharded_state_dict.keys()):
+            v = sharded_state_dict.pop(k)
+            # remove name_prefix
+            if name_prefix and k.startswith(name_prefix):
+                k = k[len(name_prefix) :]
+            if k not in self._pp_to_single_mapping:
+                sharded_state_dict[k] = v
+                continue
+            v.key = self._pp_to_single_mapping[k]
+            sharded_state_dict[self._pp_to_single_mapping[k]] = v
+
+        def increment_expert_number(s, increment):
+            import re
+
+            def replace(match):
+                original_number = int(match.group(0))
+                new_number = original_number + increment
+                return str(new_number)
+
+            return re.sub(r"(?<=experts\.)\d+", replace, s)
+
+        renamed_sharded_state_dict = {}
+        for k, v in sharded_state_dict.items():
+            global_expert_id_offset = getattr(
+                v, "global_expert_id_offset", None
+            )
+            layer_cnt = getattr(v, "layer_cnt", None)
+            if global_expert_id_offset is not None:
+                new_key = increment_expert_number(k, global_expert_id_offset)
+                v.key = new_key
+                delattr(v, "global_expert_id_offset")
+                renamed_sharded_state_dict[new_key] = v
+            elif layer_cnt is not None:
+                new_key = k + "_layer_" + str(layer_cnt)
+                v.key = new_key
+                delattr(v, "layer_cnt")
+                renamed_sharded_state_dict[new_key] = v
+            else:
+                renamed_sharded_state_dict[k] = v
+
+        return renamed_sharded_state_dict
+
+    def fp8_quant_weight(self, batch_mode=False, quant_transpose=True):
+        if self._num_virtual_pipeline_stages > 1:
+            for idx, chunk in enumerate(self._model_chunks):
+                for idx, layer in enumerate(chunk):
+                    if isinstance(layer, TransformerLayer):
+                        layer.fp8_quant_weight(
+                            batch_mode=batch_mode,
+                            quant_transpose=quant_transpose,
+                        )
+                    elif isinstance(layer, MultiTokenPredictionLayer):
+                        layer.transformer_layer.fp8_quant_weight(
+                            batch_mode=batch_mode,
+                            quant_transpose=quant_transpose,
+                        )
+        else:
+            for idx, layer in enumerate(self.run_function):
+                if isinstance(layer, TransformerLayer):
+                    layer.fp8_quant_weight(
+                        batch_mode=batch_mode, quant_transpose=quant_transpose
+                    )
+                elif isinstance(layer, MultiTokenPredictionLayer):
+                    layer.transformer_layer.fp8_quant_weight(
+                        batch_mode=batch_mode, quant_transpose=quant_transpose
+                    )
+
+    def use_fp8(self):
+        if self._num_virtual_pipeline_stages > 1:
+            for idx, chunk in enumerate(self._model_chunks):
+                for idx, layer in enumerate(chunk):
+                    if isinstance(layer, TransformerLayer) and layer.use_fp8():
+                        return True
+        else:
+            for idx, layer in enumerate(self.run_function):
+                if isinstance(layer, TransformerLayer) and layer.use_fp8():
+                    return True
+            return False

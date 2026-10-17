@@ -1,0 +1,141 @@
+cell,cell_title,arm,arm_label,dataset,target_entropy_nats,accept_length,speedup_decode
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),humaneval,0.228857,5.33703,2.74013
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),mbpp,0.303496,5.26634,2.68923
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),math500,0.329804,5.04025,2.56994
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),gsm8k,0.349436,4.97976,2.51654
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),livecodebench,0.369087,5.18854,2.61462
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),aime25,0.482346,4.79987,2.39673
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),swe-bench,0.568959,4.93704,2.52836
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),arena-hard,0.608297,4.10123,2.09556
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),rag,0.630047,4.70446,2.37932
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),translation,0.708933,3.68831,1.81291
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),mt-bench,0.790498,3.92001,1.99916
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),summarization,0.970331,3.39424,1.71942
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),alpaca,1.01705,3.74646,1.90998
+c1,target T=0  /  draft T=0,echo_mtp,ECHO-MTP (K=7),qa,1.1722,3.66118,1.82947
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,humaneval,0.228857,5.58111,2.8686
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,mbpp,0.303496,5.64381,2.96645
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,math500,0.329804,5.60351,2.89245
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,gsm8k,0.349436,5.65181,2.96016
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,livecodebench,0.369087,5.18185,2.73387
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,aime25,0.482346,5.10886,2.68322
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,swe-bench,0.568959,4.12511,2.15664
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,arena-hard,0.608297,3.99284,2.10817
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,rag,0.630047,3.96461,2.05729
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,translation,0.708933,2.91116,1.45388
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,mt-bench,0.790498,3.91843,2.03727
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,summarization,0.970331,2.89548,1.52644
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,alpaca,1.01705,3.74224,1.95275
+c1,target T=0  /  draft T=0,eagle3_cold_final,EAGLE3-cold,qa,1.1722,3.38813,1.73018
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),humaneval,0.228857,5.49218,2.89142
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),mbpp,0.303496,5.73589,3.04495
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),math500,0.329804,5.74446,3.02307
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),gsm8k,0.349436,5.67294,2.92974
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),livecodebench,0.369087,5.34335,2.83083
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),aime25,0.482346,5.06233,2.67494
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),swe-bench,0.568959,3.79315,2.01564
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),arena-hard,0.608297,4.09335,2.14384
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),rag,0.630047,3.59234,1.88936
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),translation,0.708933,3.08709,1.51842
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),mt-bench,0.790498,3.9766,2.10274
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),summarization,0.970331,3.03038,1.55666
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),alpaca,1.01705,3.7288,1.93809
+c1,target T=0  /  draft T=0,eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),qa,1.1722,3.32707,1.75008
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,humaneval,0.228857,5.73829,3.46369
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,mbpp,0.303496,5.84658,3.50453
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,math500,0.329804,5.73092,3.47872
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,gsm8k,0.349436,5.9224,3.58953
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,livecodebench,0.369087,5.19139,3.11389
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,aime25,0.482346,5.19156,3.15113
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,swe-bench,0.568959,4.50652,2.726
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,arena-hard,0.608297,4.14963,2.50114
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,rag,0.630047,5.04291,3.08382
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,translation,0.708933,3.60955,2.13024
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,mt-bench,0.790498,4,2.42103
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,summarization,0.970331,3.15948,1.90712
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,alpaca,1.01705,3.76342,2.24522
+c1,target T=0  /  draft T=0,dspark_b7,DSpark-b7,qa,1.1722,3.20023,1.92029
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,humaneval,0.228857,5.17988,3.02953
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,mbpp,0.303496,5.35049,3.16063
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,math500,0.329804,5.26912,3.07399
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,gsm8k,0.349436,5.45986,3.12894
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,livecodebench,0.369087,4.6656,2.78995
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,aime25,0.482346,4.67625,2.7495
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,swe-bench,0.568959,4.16031,2.46927
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,arena-hard,0.608297,3.74487,2.20794
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,rag,0.630047,4.63496,2.71915
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,translation,0.708933,3.29872,1.90274
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,mt-bench,0.790498,3.65224,2.14962
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,summarization,0.970331,2.88962,1.71868
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,alpaca,1.01705,3.37632,1.99028
+c1,target T=0  /  draft T=0,dflash_b8,DFlash-b8,qa,1.1722,2.91732,1.68755
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),humaneval,0.228857,4.76743,2.22186
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),mbpp,0.303496,4.46161,2.07273
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),math500,0.329804,4.39836,2.04657
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),gsm8k,0.349436,4.14952,1.88414
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),livecodebench,0.369087,4.17574,1.92895
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),aime25,0.482346,3.88858,1.80214
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),swe-bench,0.568959,3.56679,1.64132
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),arena-hard,0.608297,3.48372,1.60226
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),rag,0.630047,3.58875,1.64297
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),translation,0.708933,2.94904,1.31321
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),mt-bench,0.790498,3.55253,1.63871
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),summarization,0.970331,3.00082,1.39014
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),alpaca,1.01705,3.17621,1.45587
+c4,target T=1  /  draft T=1 (RS),echo_mtp,ECHO-MTP (K=7),qa,1.1722,2.9363,1.33064
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,humaneval,0.228857,4.65404,2.27377
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,mbpp,0.303496,4.68483,2.29191
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,math500,0.329804,4.37715,2.1534
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,gsm8k,0.349436,4.1026,2.03348
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,livecodebench,0.369087,3.82601,1.90059
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,aime25,0.482346,3.72032,1.81299
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,swe-bench,0.568959,2.59488,1.28314
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,arena-hard,0.608297,3.01481,1.48768
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,rag,0.630047,3.28696,1.61733
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,translation,0.708933,2.41679,1.16308
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,mt-bench,0.790498,3.43908,1.71524
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,summarization,0.970331,2.46179,1.21993
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,alpaca,1.01705,2.7372,1.34024
+c4,target T=1  /  draft T=1 (RS),eagle3_cold_final,EAGLE3-cold,qa,1.1722,2.19351,1.07232
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),humaneval,0.228857,4.83027,2.42036
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),mbpp,0.303496,4.56801,2.24952
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),math500,0.329804,4.45354,2.2259
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),gsm8k,0.349436,4.25956,2.11765
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),livecodebench,0.369087,3.96751,1.94617
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),aime25,0.482346,3.71457,1.83759
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),swe-bench,0.568959,2.75336,1.35361
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),arena-hard,0.608297,3.14777,1.57417
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),rag,0.630047,2.98465,1.45961
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),translation,0.708933,2.62984,1.22787
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),mt-bench,0.790498,3.39498,1.67457
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),summarization,0.970331,2.61354,1.28646
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),alpaca,1.01705,2.8797,1.42533
+c4,target T=1  /  draft T=1 (RS),eagle3_wdsnospec_ep2,EAGLE3 warm from DS-MTP (own target),qa,1.1722,2.69612,1.30009
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,humaneval,0.228857,4.72801,2.2738
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,mbpp,0.303496,4.48139,2.13997
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,math500,0.329804,4.23084,2.00457
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,gsm8k,0.349436,4.21952,1.9497
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,livecodebench,0.369087,3.672,1.74865
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,aime25,0.482346,3.82994,1.83555
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,swe-bench,0.568959,2.82959,1.36912
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,arena-hard,0.608297,3.06477,1.47782
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,rag,0.630047,3.12462,1.44789
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,translation,0.708933,2.81373,1.26238
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,mt-bench,0.790498,3.07752,1.46252
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,summarization,0.970331,2.53882,1.20223
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,alpaca,1.01705,2.68305,1.28005
+c4,target T=1  /  draft T=1 (RS),dspark_b7,DSpark-b7,qa,1.1722,2.21771,1.02538
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,humaneval,0.228857,4.06386,2.14326
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,mbpp,0.303496,3.96602,2.09956
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,math500,0.329804,3.35977,1.79378
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,gsm8k,0.349436,3.4959,1.84081
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,livecodebench,0.369087,3.09464,1.67646
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,aime25,0.482346,2.87976,1.53909
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,swe-bench,0.568959,2.33859,1.25547
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,arena-hard,0.608297,2.58619,1.38922
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,rag,0.630047,2.6958,1.42866
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,translation,0.708933,2.40583,1.23305
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,mt-bench,0.790498,2.55009,1.36095
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,summarization,0.970331,2.13529,1.15693
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,alpaca,1.01705,2.33894,1.23431
+c4,target T=1  /  draft T=1 (RS),dflash_b8,DFlash-b8,qa,1.1722,2.01036,1.05878

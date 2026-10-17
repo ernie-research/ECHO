@@ -1,0 +1,41 @@
+# 系统与驱动（2026-09-29 12:5x 采集于 <HOST> / <HOST_IP>.81）
+
+## GPU
+index, name, memory.total [MiB], driver_version
+0, CF-NG-BZZ2-O, 183359 MiB, 580.95.05
+1, CF-NG-BZZ2-O, 183359 MiB, 580.95.05
+2, CF-NG-BZZ2-O, 183359 MiB, 580.95.05
+3, CF-NG-BZZ2-O, 183359 MiB, 580.95.05
+4, CF-NG-BZZ2-O, 183359 MiB, 580.95.05
+5, CF-NG-BZZ2-O, 183359 MiB, 580.95.05
+6, CF-NG-BZZ2-O, 183359 MiB, 580.95.05
+7, CF-NG-BZZ2-O, 183359 MiB, 580.95.05
+
+## nvidia-smi 头部
+Tue Sep 29 12:52:15 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.95.05              Driver Version: 580.95.05      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+
+## OS / 内核
+Linux <HOST> 5.15.0-124-generic #134-Ubuntu SMP Fri Sep 27 20:20:17 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+NAME="Ubuntu"
+VERSION_ID="24.04"
+
+## CUDA toolkit
+/usr/local/cuda
+/usr/local/cuda-13
+/usr/local/cuda-13.2
+Cuda compilation tools, release 13.2, V13.2.51
+Build cuda_13.2.r13.2/compiler.37434383_0
+
+## compute-sanitizer（DSpark 并发 bug 下一步要用）
+/usr/local/cuda-13.2/compute-sanitizer/compute-sanitizer
+/usr/local/cuda-13/compute-sanitizer/compute-sanitizer
+/usr/local/cuda/compute-sanitizer/compute-sanitizer
+
+## python 解释器
+.venvs/specbench-t291/bin/python              Python 3.12.13
+.venvs/h800-existing-cu13/bin/python          Python 3.12.13
+/usr/local/bin/python3                        Python 3.12.13

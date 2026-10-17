@@ -1,0 +1,27 @@
+=== specbench-t291
+  import pynvml  # type: ignore[import]
+python 3.12.13
+torch         2.9.1+cu128
+torchvision   0.24.1+cu128
+triton        3.5.1
+transformers  5.8.1
+flashinfer    0.6.18.post1
+sgl_kernel    0.4.4
+tvm_ffi       0.1.11
+datasets      5.0.0
+accelerate    1.14.0
+numpy         1.26.4
+cuda 12.8 | cap (10, 0)
+=== h800-existing-cu13
+python 3.12.13
+torch         ERR ImportError
+torchvision   ERR ImportError
+triton        3.6.0
+transformers  5.8.1
+flashinfer    ERR ImportError
+sgl_kernel    ERR ImportError
+tvm_ffi       0.1.11
+datasets      5.0.0
+accelerate    ERR ImportError
+numpy         1.26.4
+torch cuda probe failed: ImportError

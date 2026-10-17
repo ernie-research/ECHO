@@ -1,0 +1,14 @@
+{
+ "c1": [
+  "20260922-234333__echo1.5_sft_step5000_tok__sglang__t0__dp1xc1__cell1b_mtp",
+  "20260922-234336__echo1.5_sft_step5000_tok__sglang__t0__dp1xc1__cell1b_e3ds",
+  "20260922-221944__echo1.5_sft_step5000_tok__sglang__t0__dp1xc1__dflash_t0",
+  "20260924-120338__ds_mtp1_sft_step5000_tok__sglang__t0__dp1xc1__dsown_nospec_t0"
+ ],
+ "c4": [
+  "20260922-235511__echo1.5_sft_step5000_tok__sglang__t1__dp1xc1__ce3rs_tgt1",
+  "20260922-221944__echo1.5_sft_step5000_tok__sglang__t1__dp1xc1__dflash_t1rs",
+  "20260924-142057__ds_mtp1_sft_step5000_tok__sglang__t1__dp1xc1__dsown_nospec_c4",
+  "20260922-t1rskMERGED__echo1.5_sft_step5000_tok__sglang__t1__dp1xc1__echo_conc_sweep"
+ ]
+}

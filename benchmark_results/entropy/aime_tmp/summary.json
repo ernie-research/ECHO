@@ -1,0 +1,38 @@
+{
+  "model": "<WORKSPACE>/echo1.5_sft_step5000_tok",
+  "vocab_size": 201216,
+  "top_k_logprobs": 64,
+  "max_samples": 12,
+  "max_new_tokens": 256,
+  "trajectory_temperature": 0.0,
+  "logprob_temperature": 1.0,
+  "seed": 0,
+  "datasets": [
+    {
+      "dataset": "aime_all",
+      "num_sequences": 12,
+      "num_tokens": 3072,
+      "entropy": 0.3637521926552722,
+      "entropy_std": 0.13966102513814008,
+      "entropy_token_weighted": 0.3637521926552722,
+      "entropy_upper": 0.383513647523445,
+      "top1_prob": 0.8828898284266349,
+      "tail_mass": 0.0011814825018526048,
+      "tail_mass_max": 0.16115862880020526,
+      "mean_response_tokens": 256.0
+    },
+    {
+      "dataset": "aime_recent",
+      "num_sequences": 12,
+      "num_tokens": 3072,
+      "entropy": 0.5815537468862073,
+      "entropy_std": 0.1910333003796949,
+      "entropy_token_weighted": 0.5815537468862073,
+      "entropy_upper": 0.6346873110071372,
+      "top1_prob": 0.818603926253663,
+      "tail_mass": 0.0033107625222384483,
+      "tail_mass_max": 0.24346627972415047,
+      "mean_response_tokens": 256.0
+    }
+  ]
+}

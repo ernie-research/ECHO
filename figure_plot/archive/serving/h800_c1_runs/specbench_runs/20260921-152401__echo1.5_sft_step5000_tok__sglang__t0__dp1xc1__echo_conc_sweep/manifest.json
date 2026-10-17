@@ -1,0 +1,256 @@
+{
+  "run_id": "20260921-152401__echo1.5_sft_step5000_tok__sglang__t0__dp1xc1__echo_conc_sweep",
+  "created_at": "2026-09-21T15:34:57",
+  "host": "<HOST>",
+  "harness": "sglang",
+  "target_model": "<WORKSPACE>/echo1.5_sft_step5000_tok",
+  "target_model_abs": "<WORKSPACE>/echo1.5_sft_step5000_tok",
+  "datasets": [
+    [
+      "gsm8k",
+      256
+    ],
+    [
+      "math500",
+      256
+    ],
+    [
+      "arena-hard",
+      256
+    ],
+    [
+      "alpaca",
+      256
+    ]
+  ],
+  "protocol": {
+    "run_baseline": true,
+    "resume": true,
+    "save_responses": true,
+    "num_samples": 128,
+    "max_new_tokens": 512,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "top_k": 1,
+    "attention_backend": "fa3",
+    "tp_size": 8,
+    "dp_size": 1,
+    "speculative_use_rejection_sampling": false,
+    "speculative_draft_temperature": null,
+    "spec_num_steps": 7,
+    "spec_eagle_topk": 1,
+    "spec_num_draft_tokens": 8,
+    "dtype": "bfloat16",
+    "mem_fraction_static": 0.7,
+    "extra_server_args": "",
+    "concurrencies": [
+      16,
+      32,
+      64
+    ],
+    "repeats": 1,
+    "max_running_requests": 128,
+    "cuda_graph_max_bs": 64,
+    "page_size": 1,
+    "disable_cuda_graph": false,
+    "disable_radix_cache": false,
+    "batch_requests": false,
+    "warmup_requests": 3,
+    "warmup_max_new_tokens": 1024,
+    "skip_first_requests": 1,
+    "timeout_s": 3600,
+    "host": "127.0.0.1",
+    "port_base": 20000,
+    "hf_attn_implementation": "flash_attention_2",
+    "confidence_threshold": 0.0
+  },
+  "env": {
+    "python": "3.12.13",
+    "specbench_commit": "12a2450",
+    "torch": "2.9.0+cu130",
+    "torch_cuda": "13.0",
+    "gpu": "CF-NG-HZZ1-O",
+    "gpu_count": 8,
+    "transformers": "5.8.1",
+    "sglang": "0.0.0.dev14401+gaf83642cc.d20260921",
+    "flashinfer": "0.6.18.post1"
+  },
+  "methods": {
+    "baseline": {
+      "speculative_algorithm": null,
+      "speculative_params": {
+        "speculative_num_steps": 7,
+        "speculative_eagle_topk": 1,
+        "speculative_num_draft_tokens": 8
+      },
+      "method_env": {},
+      "ragged_verify_mode": null,
+      "family": "baseline"
+    },
+    "echo_mtp": {
+      "draft_model": "<WORKSPACE>/echo1.5_sft_step5000_nextn_draft",
+      "abs_path": "<WORKSPACE>/echo1.5_sft_step5000_nextn_draft",
+      "basename": "echo1.5_sft_step5000_nextn_draft",
+      "ckpt_tag": "echo1.5_sft_step5000_nextn_draft",
+      "mtime": "2026-09-19T12:55:29",
+      "architecture": "Echo5V2ForCausalLM",
+      "speculative_algorithm": "EAGLE",
+      "speculative_params": {
+        "speculative_num_steps": 7,
+        "speculative_eagle_topk": 1,
+        "speculative_num_draft_tokens": 8
+      },
+      "method_env": {},
+      "ragged_verify_mode": null,
+      "family": "eagle3"
+    },
+    "eagle3_cold_final": {
+      "draft_model": "<WORKSPACE>/serve_eagle3_cold_s88785_v2",
+      "abs_path": "<WORKSPACE>/serve_eagle3_cold_s88785_v2",
+      "basename": "serve_eagle3_cold_s88785_v2",
+      "mtime": "2026-09-20T15:59:00",
+      "architecture": "Echo5MTPEagle3ForCausalLM",
+      "speculative_algorithm": "EAGLE3",
+      "speculative_params": {
+        "speculative_num_steps": 7,
+        "speculative_eagle_topk": 1,
+        "speculative_num_draft_tokens": 8
+      },
+      "method_env": {},
+      "ragged_verify_mode": null,
+      "family": "eagle3"
+    },
+    "dspark_b7": {
+      "draft_model": "<WORKSPACE>/serve_dspark_b7_s88785",
+      "abs_path": "<WORKSPACE>/serve_dspark_b7_s88785",
+      "basename": "serve_dspark_b7_s88785",
+      "mtime": "2026-09-20T10:43:39",
+      "architecture": "Echo5DSparkModel",
+      "block_size": 7,
+      "markov_head_type": "vanilla",
+      "speculative_algorithm": "DSPARK",
+      "speculative_params": {
+        "speculative_num_draft_tokens": 8
+      },
+      "method_env": {
+        "SGLANG_RAGGED_VERIFY_MODE": "static"
+      },
+      "ragged_verify_mode": "static",
+      "family": "dflash"
+    },
+    "dspark_b16": {
+      "draft_model": "<WORKSPACE>/serve_dspark_b16_s88785",
+      "abs_path": "<WORKSPACE>/serve_dspark_b16_s88785",
+      "basename": "serve_dspark_b16_s88785",
+      "mtime": "2026-09-20T10:43:51",
+      "architecture": "Echo5DSparkModel",
+      "block_size": 16,
+      "markov_head_type": "vanilla",
+      "speculative_algorithm": "DSPARK",
+      "speculative_params": {
+        "speculative_num_draft_tokens": 17
+      },
+      "method_env": {
+        "SGLANG_RAGGED_VERIFY_MODE": "static"
+      },
+      "ragged_verify_mode": "static",
+      "family": "dflash"
+    },
+    "echo_mtp_k3": {
+      "draft_model": "<WORKSPACE>/echo1.5_sft_step5000_nextn_draft",
+      "abs_path": "<WORKSPACE>/echo1.5_sft_step5000_nextn_draft",
+      "basename": "echo1.5_sft_step5000_nextn_draft",
+      "ckpt_tag": "echo1.5_sft_step5000_nextn_draft",
+      "mtime": "2026-09-19T12:55:29",
+      "architecture": "Echo5V2ForCausalLM",
+      "speculative_algorithm": "EAGLE",
+      "speculative_params": {
+        "speculative_num_steps": 3,
+        "speculative_eagle_topk": 1,
+        "speculative_num_draft_tokens": 4
+      },
+      "method_env": {},
+      "ragged_verify_mode": null,
+      "family": "eagle3"
+    },
+    "dspark_b7_capaccept": {
+      "draft_model": "<WORKSPACE>/serve_dspark_b7_s88785",
+      "abs_path": "<WORKSPACE>/serve_dspark_b7_s88785",
+      "basename": "serve_dspark_b7_s88785",
+      "mtime": "2026-09-20T10:43:39",
+      "architecture": "Echo5DSparkModel",
+      "block_size": 7,
+      "markov_head_type": "vanilla",
+      "speculative_algorithm": "DSPARK",
+      "speculative_params": {
+        "speculative_num_draft_tokens": 8
+      },
+      "method_env": {
+        "SGLANG_RAGGED_VERIFY_MODE": "cap-accept"
+      },
+      "ragged_verify_mode": "cap-accept",
+      "family": "dflash"
+    },
+    "dspark_b16_capaccept": {
+      "draft_model": "<WORKSPACE>/serve_dspark_b16_s88785",
+      "abs_path": "<WORKSPACE>/serve_dspark_b16_s88785",
+      "basename": "serve_dspark_b16_s88785",
+      "mtime": "2026-09-20T10:43:51",
+      "architecture": "Echo5DSparkModel",
+      "block_size": 16,
+      "markov_head_type": "vanilla",
+      "speculative_algorithm": "DSPARK",
+      "speculative_params": {
+        "speculative_num_draft_tokens": 17
+      },
+      "method_env": {
+        "SGLANG_RAGGED_VERIFY_MODE": "cap-accept"
+      },
+      "ragged_verify_mode": "cap-accept",
+      "family": "dflash"
+    }
+  },
+  "draft_log": [
+    {
+      "timestamp": "2026-09-21T15:34:57",
+      "method": "baseline",
+      "draft_model": null
+    },
+    {
+      "timestamp": "2026-09-21T15:44:15",
+      "method": "echo_mtp",
+      "draft_model": "<WORKSPACE>/echo1.5_sft_step5000_nextn_draft"
+    },
+    {
+      "timestamp": "2026-09-21T15:53:16",
+      "method": "eagle3_cold_final",
+      "draft_model": "<WORKSPACE>/serve_eagle3_cold_s88785_v2"
+    },
+    {
+      "timestamp": "2026-09-21T16:02:47",
+      "method": "dspark_b7",
+      "draft_model": "<WORKSPACE>/serve_dspark_b7_s88785"
+    },
+    {
+      "timestamp": "2026-09-21T16:13:37",
+      "method": "dspark_b16",
+      "draft_model": "<WORKSPACE>/serve_dspark_b16_s88785"
+    },
+    {
+      "timestamp": "2026-09-21T16:22:51",
+      "method": "echo_mtp_k3",
+      "draft_model": "<WORKSPACE>/echo1.5_sft_step5000_nextn_draft"
+    },
+    {
+      "timestamp": "2026-09-21T17:16:42",
+      "method": "dspark_b7_capaccept",
+      "draft_model": "<WORKSPACE>/serve_dspark_b7_s88785"
+    },
+    {
+      "timestamp": "2026-09-21T17:28:11",
+      "method": "dspark_b16_capaccept",
+      "draft_model": "<WORKSPACE>/serve_dspark_b16_s88785"
+    }
+  ],
+  "updated_at": "2026-09-21T17:28:11"
+}
