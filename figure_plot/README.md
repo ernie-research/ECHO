@@ -53,6 +53,10 @@ only as figures:
 | `intro_al7_points.csv` | Figure 1b |
 | `serving_metrics.csv` | Figure 3b |
 
+In `intro_al7_points.csv`, the ECHO-1.5 and ECHO-3 rows come from sweeps that draft to K=8, so every
+depth plotted is measured. The other three come from sweeps to K=6; there `den7 = 0` marks `p7` as
+extrapolated, continuing the geometric decay of the last two measured rates, `p7 = p6 * min(p6 / p5, 1)`.
+
 `serving_metrics.csv` is a compact export of target entropy, accepted length, and corrected
 decode-speedup values formerly reconstructed at plotting time from the raw serving archive.
 The derivation scripts and raw measurements are retained under `archive/serving/`, while the

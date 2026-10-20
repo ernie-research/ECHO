@@ -23,10 +23,10 @@ MCOL = {"MTP-1": P.MTP_1, "MTP-3": P.MTP_3, "ECHO-1": P.ECHO_1,
 CSV_LABEL = {"MTP-1": "MTP-1", "MTP-3": "MTP-3", "ECHO-1": "ECHO-1",
              "ECHO-1.5$^{(3)}$": "ECHO-1.5", "ECHO-3": "ECHO-3"}
 ORDER = ["MTP-1", "MTP-3", "ECHO-1", "ECHO-1.5$^{(3)}$", "ECHO-3"]
-# ECHO-1.5 (5.62) and ECHO-3 (5.78) end within 0.16 of each other, so their names
+# ECHO-1.5 (5.54) and ECHO-3 (5.61) end within 0.07 of each other, so their names
 # are pushed apart vertically; the rest sit on their own endpoint.
 LABEL_Y = {"MTP-1": 2.04, "MTP-3": 4.42, "ECHO-1": 2.83,
-           "ECHO-1.5$^{(3)}$": 5.54, "ECHO-3": 5.87}
+           "ECHO-1.5$^{(3)}$": 5.42, "ECHO-3": 5.80}
 
 rows = {}
 with (INPUT_DIR / "intro_al7_points.csv").open() as f:
@@ -35,10 +35,9 @@ with (INPUT_DIR / "intro_al7_points.csv").open() as f:
                             [float(r[f"tau_K{k}"]) for k in range(1, 8)])
 
 plt.rcParams.update({"font.size": 7.4, "axes.linewidth": 1.0,
-                     "axes.edgecolor": P.AXIS, "text.color": "black",
-                     "axes.labelcolor": "black", "xtick.color": P.AXIS,
-                     "ytick.color": P.AXIS, "xtick.labelcolor": "black",
-                     "ytick.labelcolor": "black"})        # all text black; axes stay AXIS
+                     "axes.edgecolor": P.AXIS, "text.color": P.AXIS,
+                     "axes.labelcolor": P.AXIS, "xtick.color": P.AXIS,
+                     "ytick.color": P.AXIS})   # text in AXIS grey, as Figure 1a beside it
 # Canvas chosen so that, at \includegraphics[width=2.22in], this panel's axes
 # rectangle lands at the same page height as teaser (a)'s: same drawn height and the
 # same offset below the subfigure box top. Solved from the two measured files;
@@ -57,7 +56,7 @@ ax.axvspan(3.5, 7.4, color=P.ZONE, alpha=.11, zorder=0)
 for td, xc, ha in ((1, 2.5, "center"), (3, 5.5, "center")):
     ax.axvline(td + .5, color=P.AXIS, lw=1.3, ls=(0, (5, 2)), zorder=2)
     ax.text(xc, 6.05, f"beyond {td}", ha=ha, va="center",
-            fontsize=5.0, color="black")
+            fontsize=5.0, color=P.AXIS)
 
 x = list(range(1, 8))
 for lab in ORDER:
@@ -74,7 +73,7 @@ for lab in ORDER:
     ax.plot([x[td - 1]], [al[td - 1]], "o", ls="none", ms=4.6, mfc=col, mec=col,
             zorder=5)
     ax.annotate(lab, (7.35, LABEL_Y[lab]), ha="left", va="center",
-                fontsize=6.8, color="black", zorder=5)
+                fontsize=6.8, color=col, zorder=5)
 
 ax.set_xticks(x)
 ax.set_xlim(.75, 10.5)
