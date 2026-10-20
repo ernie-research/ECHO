@@ -1,11 +1,11 @@
 # ECHO: Efficient Causal Self-Recursion Beyond Auxiliary Multi-Token Prediction
 
-Artefacts for the ECHO paper. ECHO is a multi-token prediction design that
+This repository contains the artefacts for the ECHO paper. ECHO is a multi-token prediction design that
 reuses the backbone's last layer as the body of every MTP depth, and samples how
 many depths to train at each optimizer step (depth `D ~ pi` over 1, 2, 3 with
 probabilities 0.6, 0.3, 0.1, so `E[D] = 1.5`). Both comparisons against
-DeepSeek-MTP are cost-matched: ECHO-1 against MTP-1 at equal depth-one cost,
-ECHO-1.5 against MTP-3 at half the MTP cost.
+DeepSeek-MTP are cost-matched: ECHO-1 is compared with MTP-1 at equal depth-one
+cost, and ECHO-1.5 with MTP-3 at half the MTP cost.
 
 | | |
 |---|---|
@@ -33,7 +33,7 @@ After one round of supervised finetuning:
 |---|---|---|
 | 36.27 | 37.88 | 38.37 |
 
-The two cost-matched pairings to read off the first table are ECHO-1 against
+In the first table, the two cost-matched pairings to compare are ECHO-1 against
 MTP-1 and ECHO-1.5(3) against MTP-3. Per-benchmark values are in
 `benchmark_table/`, together with which of the fourteen rows this repository
 re-derives and which it does not.
@@ -86,7 +86,7 @@ Two further cells are graded by executing the generated programs
 (`scoring/code_score.py`, `scoring/lcb_score.py`). Five rows carry the
 evaluation platform's own number instead — MATH, MBPP+, PreciseWikiQA, HotpotQA
 and PopQA — and that chain's answer extraction and judging rules are not
-published, so they cannot be reproduced exactly from outside it. Our own runs of
+published, so these rows cannot be reproduced exactly outside that chain. Our own runs of
 them cannot be put next to the paper's cell either: a different few-shot prefix,
 an answer-extraction rule that does not match for MATH, a weaker test bar for
 MBPP+, and for the three closed-book sets a 600-item sample rather than the full
@@ -125,7 +125,7 @@ two agree numerically, plus the code that exports a trained draft into an
 sglang-servable one.
 
 **Figures** — `figure_plot/`. The Figure 1 to 8 scripts, all required
-plotting inputs, and generated PDF/PNG outputs are separated into `scripts/`,
+plotting inputs, and generated PDF/PNG outputs are organised into `scripts/`,
 `inputs/`, and `outputs/`. The accepted-length serving diagnostics are under
 `figure_plot/archive/` with their scripts and inputs.
 
@@ -153,4 +153,5 @@ serving stack, which is not included.
 
 ## Citation
 
-The paper is under review. The citation will be added here once it is public.
+The paper is currently under review; a citation will be added here once it is
+publicly available.
