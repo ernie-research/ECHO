@@ -47,19 +47,25 @@ checkpoints; cluster paths appear as `<WORKSPACE>`.
 
 ## What you need that is not here
 
-The checkpoints, the tokenizer, and a Paddle build. The HF path needs only
-`torch` and `transformers`; the Paddle path additionally needs Paddle
-`3.4.0.post20260608+f3f5f3fd150` or a build verified compatible with it. The
-Python and CUDA binaries for Paddle are not vendored.
+A Paddle build, for the Paddle path. The checkpoints and the tokenizer are
+release assets (see Checkpoints in the top-level README); the evaluators read
+the tokenizer from `./tokenizer`, and every release directory contains it. The
+HF path needs only `torch` and `transformers`; the Paddle path additionally
+needs Paddle `3.4.0.post20260608+f3f5f3fd150` or a build verified compatible
+with it. The Python and CUDA binaries for Paddle are not vendored.
+
+`data/specbench/` holds the GSM8K, MATH500 and HumanEval prompts in the
+SpecBench format that the accepted-length runs behind Figure 1b used.
 
 ## A note on identifiers
 
 The model classes here are named `Target*` and the config declares
 `model_type = "echo_target"`. The internal family name they carried has been
 replaced throughout, the same substitution the rest of this repository applies
-to paths and hostnames. `torch_weight_loader.build_and_load_torch` constructs
-the config and the model directly rather than going through `AutoConfig` /
-`AutoModel`, so it does not read `model_type` or `architectures` from the
-checkpoint and is unaffected by the rename. If you load a checkpoint through
-`AutoModel.from_pretrained` instead, its `config.json` has to declare the same
-`model_type` as the class registered here.
+to paths and hostnames, and the released checkpoints' `config.json` declares the
+same names. `torch_weight_loader.build_and_load_torch` constructs the config and
+the model directly rather than going through `AutoConfig` / `AutoModel`, so it
+does not read `model_type` or `architectures` from the checkpoint. `AutoConfig`
+reads the released configs once `TargetConfig` is registered under
+`echo_target`, but the weights must still go through `build_and_load_torch`:
+their key names are the export's, not the module tree's.
