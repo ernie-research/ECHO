@@ -51,14 +51,14 @@ Three of the pretrained models and the three finetuned ones are on the
 [releases page](https://github.com/ernie-research/ECHO/releases), one release
 per model:
 
-| model | release | stage | MTP depths stored | size |
-|---|---|---|---|---|
-| MTP-1 | [`ckpt-mtp-1`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-mtp-1) | pretrained, step 78k | 1 | 22.0 GB |
-| ECHO-1 | [`ckpt-echo-1`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1) | pretrained, step 78k | 1 | 22.0 GB |
-| ECHO-1.5(3) | [`ckpt-echo-1.5`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1.5) | pretrained, step 78k | 3 | 23.7 GB |
-| MTP-1-Instruct | [`ckpt-mtp-1-instruct`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-mtp-1-instruct) | SFT, step 5000 | 1 | 22.0 GB |
-| ECHO-1.5(3)-Instruct | [`ckpt-echo-1.5-instruct`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1.5-instruct) | SFT, step 5000 | 3 | 23.7 GB |
-| ECHO-2(7)-Instruct | [`ckpt-echo-2-7-instruct`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-2-7-instruct) | SFT, step 4800 | 7 | 27.1 GB |
+| model | release | stage | MTP depths stored | size | downloads |
+|---|---|---|---|---|---|
+| MTP-1 | [`ckpt-mtp-1`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-mtp-1) | pretrained, step 78k | 1 | 22.0 GB | [![downloads](https://img.shields.io/github/downloads/ernie-research/ECHO/ckpt-mtp-1/total?label=downloads)](https://github.com/ernie-research/ECHO/releases/tag/ckpt-mtp-1) |
+| ECHO-1 | [`ckpt-echo-1`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1) | pretrained, step 78k | 1 | 22.0 GB | [![downloads](https://img.shields.io/github/downloads/ernie-research/ECHO/ckpt-echo-1/total?label=downloads)](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1) |
+| ECHO-1.5(3) | [`ckpt-echo-1.5`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1.5) | pretrained, step 78k | 3 | 23.7 GB | [![downloads](https://img.shields.io/github/downloads/ernie-research/ECHO/ckpt-echo-1.5/total?label=downloads)](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1.5) |
+| MTP-1-Instruct | [`ckpt-mtp-1-instruct`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-mtp-1-instruct) | SFT, step 5000 | 1 | 22.0 GB | [![downloads](https://img.shields.io/github/downloads/ernie-research/ECHO/ckpt-mtp-1-instruct/total?label=downloads)](https://github.com/ernie-research/ECHO/releases/tag/ckpt-mtp-1-instruct) |
+| ECHO-1.5(3)-Instruct | [`ckpt-echo-1.5-instruct`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1.5-instruct) | SFT, step 5000 | 3 | 23.7 GB | [![downloads](https://img.shields.io/github/downloads/ernie-research/ECHO/ckpt-echo-1.5-instruct/total?label=downloads)](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-1.5-instruct) |
+| ECHO-2(7)-Instruct | [`ckpt-echo-2-7-instruct`](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-2-7-instruct) | SFT, step 4800 | 7 | 27.1 GB | [![downloads](https://img.shields.io/github/downloads/ernie-research/ECHO/ckpt-echo-2-7-instruct/total?label=downloads)](https://github.com/ernie-research/ECHO/releases/tag/ckpt-echo-2-7-instruct) |
 
 Each is the checkpoint behind its column in the tables above (MTP-1-Instruct is
 the MTP-Instruct column). A release is one model directory: `config.json`, the
