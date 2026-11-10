@@ -315,7 +315,9 @@ class TargetMoEGate(nn.Module):
         if GATE_BF16:
             # Reproduces FIX #4 in its BROKEN state, for measurement only (TARGET_GATE_BF16=1).
             # Whole routing path in bf16: `scores + bias` then quantises small scores away.
-            logits = F.linear(hidden, self.weight)
+            # the router is fp32 now; this switch is the measurement-only bf16 path
+            w = self.weight if self.weight.dtype == hidden.dtype else self.weight.to(hidden.dtype)
+            logits = F.linear(hidden, w)
             scores = logits.sigmoid() if self.scoring_func == "sigmoid" else logits.softmax(dim=-1)
             bias = self.e_score_correction_bias if correction_bias is None else correction_bias
             routing_scores = scores + bias.unsqueeze(0)

@@ -62,8 +62,9 @@ per model:
 
 Each is the checkpoint behind its column in the tables above (MTP-1-Instruct is
 the MTP-Instruct column). A release is one model directory: `config.json`, the
-safetensors index and shards byte for byte as evaluated (bf16, router biases
-fp32), and the tokenizer. GitHub lists a sha256 digest for every file. The
+safetensors index and shards byte for byte as evaluated (bf16, except each MoE
+router's weight, per-expert scaling factor and bias, which are fp32), and the
+tokenizer. GitHub lists a sha256 digest for every file. The
 weights are released under this repository's MIT license.
 
 The tokenizer loads with `AutoTokenizer.from_pretrained` on the release
@@ -100,7 +101,8 @@ key names (per-expert `w1`/`w2`/`w3`, MTP depth d as `model.layers.{23+d}`),
 which match 243 of the model's 14,298 state-dict keys, so the generic loader
 would leave almost every weight at its initial value. `build_and_load_torch`
 maps the keys, takes the number of MTP depths from the weights rather than the
-config, and loads every depth from its own keys.
+config, and loads every depth from its own keys. It keeps every MoE router in
+fp32, as stored, and casts the rest of the model to the `dtype` you pass.
 
 ### Extrapolation needs each depth's router bias
 
@@ -129,8 +131,9 @@ ones it was trained with:
 - running the first depth's module at every depth of a multi-depth checkpoint;
 - skipping the MTP layer's keys because its weights are shared, which leaves the
   bias at its zero initialisation;
-- casting the loaded model with `.to(torch.bfloat16)`, which casts float buffers
-  as well (the loader casts first and restores the bias to fp32 afterwards).
+- casting the loaded model with `.to(torch.bfloat16)`, which casts the routers'
+  fp32 tensors as well, bias included (the loader casts first and then puts
+  every router back in fp32).
 
 `build_and_load_torch` loads every depth's bias from its own key in fp32.
 
@@ -153,9 +156,9 @@ ECHO-1.5(3), the first 500 for ECHO-1 and MTP-1 (HumanEval has 164).
 The rate at depth k counts only the rounds in which depths 1 to k-1 were
 accepted, so the deep entries rest on few rounds: MTP-1 reaches depth 4 in 658
 of 118,691 rounds and depth 6 in none, ECHO-1 reaches depth 6 in 1,941 of
-87,379. These runs predate the loader's fp32 handling of the router bias:
-every layer's bias, target and draft alike, was rounded to bf16, so the current
-code will not reproduce the digits exactly.
+87,379. These runs predate the loader's fp32 handling of the routers: every
+layer's router bias, weight and scaling factor, target and draft alike, was
+rounded to bf16, so the current code will not reproduce the digits exactly.
 
 ```bash
 cd paddle_hf_alignment && mkdir -p results

@@ -198,18 +198,22 @@ def build_torch_model(
         model = TargetForCausalLM(config).to(dtype=dtype)
 
     # `.to(dtype)` also casts float BUFFERS (the same trap documented for
-    # TargetRotaryEmbedding.inv_freq). e_score_correction_bias is fp32 in the
-    # checkpoint and is added to sigmoid scores that are O(1e-4..1e-1): bf16
-    # resolution near 0.6 is ~0.004, so the cast perturbs the bias by ~0.002 and
-    # REORDERS the top-8 boundary. Measured against the fp32 checkpoint values,
-    # the bf16 bias flipped ~2.4 of 8 experts for 59% of layer-0 tokens; that was
-    # the whole source of the sglang-vs-HF gate-on logits divergence (sglang keeps
-    # it fp32 and reproduces top_k(sigmoid(logits)+bias) exactly, 8.000/8).
-    # Keep routing-critical buffers in fp32 so the loader writes fp32 values.
+    # TargetRotaryEmbedding.inv_freq). A MoE router is fp32 in the checkpoint: its gate weight,
+    # its per-expert scaling factor and e_score_correction_bias. The bias is added to
+    # sigmoid scores that are O(1e-4..1e-1): bf16 resolution near 0.6 is ~0.004, so
+    # the cast perturbs the bias by ~0.002 and REORDERS the top-8 boundary. Measured
+    # against the fp32 checkpoint values, the bf16 bias flipped ~2.4 of 8 experts for
+    # 59% of layer-0 tokens; that was the whole source of the sglang-vs-HF gate-on
+    # logits divergence (sglang keeps it fp32 and reproduces top_k(sigmoid+bias)
+    # exactly, 8.000/8). The gate weight and the scaling factor are rounded the same
+    # way: inside one layer the top-8 then differs on ~1% of tokens, and over the
+    # whole model the draft argmax agrees as closely as under a change of attention
+    # kernel (CPU probe on four checkpoints, 2026-11-10).
+    # Keep the whole router in fp32 so the loader writes the stored values.
     for module in model.modules():
         bias = getattr(module, "e_score_correction_bias", None)
         if isinstance(bias, torch.Tensor) and bias.is_floating_point():
-            module.e_score_correction_bias = bias.float()
+            module.float()   # gate weight, routed_scaling_factor_param and bias
 
     return model, config
 
