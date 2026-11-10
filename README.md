@@ -1,5 +1,7 @@
 # ECHO: Efficient Causal Self-Recursion Beyond Auxiliary Multi-Token Prediction
 
+[![GitHub release downloads](https://img.shields.io/github/downloads/ernie-research/ECHO/total)](https://github.com/ernie-research/ECHO/releases)
+
 This repository contains the artefacts for the ECHO paper. ECHO is a multi-token prediction design that
 reuses the backbone's last layer as the body of every MTP depth, and samples how
 many depths to train at each optimizer step (depth `D ~ pi` over 1, 2, 3 with
