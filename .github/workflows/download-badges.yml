@@ -1,0 +1,70 @@
+# Updates the download badges in the README. A release's count is the download
+# count of its most-downloaded weight shard; total.json adds the releases up.
+# The counts live on the `badges` branch and reach the README through
+# shields.io's endpoint badge.
+name: download badges
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: download-badges
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: badges
+
+      - name: Count downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, urllib.request
+
+          def get(path):
+              items, page = [], 1
+              while True:
+                  req = urllib.request.Request(
+                      f"https://api.github.com/repos/{os.environ['REPO']}/{path}?per_page=100&page={page}",
+                      headers={"Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                               "Accept": "application/vnd.github+json"})
+                  batch = json.load(urllib.request.urlopen(req))
+                  items += batch
+                  if len(batch) < 100:
+                      return items
+                  page += 1
+
+          def badge(name, n):
+              with open(f"{name}.json", "w") as f:
+                  json.dump({"schemaVersion": 1, "label": "downloads", "message": str(n), "color": "blue"}, f)
+                  f.write("\n")
+
+          total = 0
+          for rel in get("releases"):
+              if rel["draft"] or not rel["tag_name"].startswith("ckpt-"):
+                  continue
+              shards = [a["download_count"] for a in get(f"releases/{rel['id']}/assets")
+                        if a["name"].startswith("model-") and a["name"].endswith(".safetensors")]
+              if shards:
+                  badge(rel["tag_name"], max(shards))
+                  total += max(shards)
+          badge("total", total)
+          print("total", total)
+          EOF
+
+      - name: Commit changed counts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || { git commit -q -m "Update download counts"; git push -q; }
