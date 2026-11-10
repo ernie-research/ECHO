@@ -33,6 +33,11 @@ After one round of supervised finetuning:
 |---|---|---|
 | 36.27 | 37.88 | 38.37 |
 
+The SFT checkpoints were trained on a small instruction-following dataset
+whose purpose is to give the models instruction-following behaviour, not to
+optimise benchmark scores. The SFT rows above are reported for completeness;
+they are not instruction-tuning benchmark results.
+
 In the first table, the two cost-matched pairings to compare are ECHO-1 against
 MTP-1 and ECHO-1.5(3) against MTP-3. Per-benchmark values are in
 `benchmark_table/`, together with which of the fourteen rows this repository
