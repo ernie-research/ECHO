@@ -14,12 +14,9 @@ map it is built from.
 - `EAGLE3_EXPORT_WEIGHT_MAP.md` — the key-by-key map between the training-side
   draft (`TargetMTPEagleModel`) and the sglang drafter (`TargetModelNextN`). The
   two describe the same MTP block with different prefixes and expert layouts, so
-  the export is a key and tensor rewrite with no new modelling. This table was
-  written because the original export script was truncated by a disk ENOSPC
-  before it was ever committed anywhere — the map is the authority, the code
-  below is a rebuild from it.
-- `export_eagle3_draft_for_sglang.py` — that rebuild. It is the complete
-  script; the 46-line truncated original is not published, since it cannot run.
+  the export is a key and tensor rewrite with no new modelling. The map is the
+  authority; the code below is a rebuild from it.
+- `export_eagle3_draft_for_sglang.py` — that rebuild, complete and runnable.
 - `export_dspark_draft_for_sglang.py` — the same for the DSpark-family drafts,
   including the DFlash checkpoint, which exports through the DSpark path because
   its config declares `TargetDSparkModel` with `markov_rank=0`.

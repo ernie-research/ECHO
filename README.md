@@ -152,9 +152,9 @@ ECHO-1.5(3), the first 500 for ECHO-1 and MTP-1 (HumanEval has 164).
 The rate at depth k counts only the rounds in which depths 1 to k-1 were
 accepted, so the deep entries rest on few rounds: MTP-1 reaches depth 4 in 658
 of 118,691 rounds and depth 6 in none, ECHO-1 reaches depth 6 in 1,941 of
-87,379. These runs predate the loader's fp32 handling of the routers: every
-layer's router bias, weight and scaling factor, target and draft alike, was
-rounded to bf16, so the current code will not reproduce the digits exactly.
+87,379. These runs predate the loader keeping the routers in fp32: their router
+biases, weights and scaling factors were rounded to bf16, so the current code
+will not reproduce the digits exactly.
 
 ```bash
 cd paddle_hf_alignment && mkdir -p results
@@ -182,10 +182,10 @@ Six checkpoints and their tokenizer are release assets (see
 [Checkpoints](#checkpoints)); no corpus is included. `accept_length` in a
 `results.jsonl` row is a mean over that run's samples, not a per-request record.
 
-Cluster paths, hostnames, job identifiers and internal package wheels have been
-replaced; `<WORKSPACE>`, `<HOST>`, `<HOST_IP>` and `<JOB_ID>` stand where they
-appeared. In shell scripts the first is written `${WORKSPACE:?set WORKSPACE}`, so
-a script parses as it stands and says what to set. No number was touched.
+Cluster paths, hostnames and job identifiers are written as `<WORKSPACE>`,
+`<HOST>`, `<HOST_IP>` and `<JOB_ID>`; no internal package wheels are included.
+In shell scripts the first is written `${WORKSPACE:?set WORKSPACE}`, so a script
+parses as it stands and says what to set. No number was touched.
 
 ## Grading
 

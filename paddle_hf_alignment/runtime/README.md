@@ -11,8 +11,7 @@ code is unmodified: 163 of its 166 Python files carry the upstream
 `Copyright (c) 2025 PaddlePaddle Authors` notice and are licensed under the
 Apache License 2.0, whose terms are reproduced in each file header and available
 at http://www.apache.org/licenses/LICENSE-2.0. Nothing here was renamed or
-rewritten, including identifiers that name model families, so that the copy
-stays diffable against upstream.
+rewritten, so the copy stays diffable against upstream.
 
 The first-party adapter that builds a model through this library is not in this
 directory; it is `../src/fleet_model/`.

@@ -32,9 +32,7 @@ checkpoints; cluster paths appear as `<WORKSPACE>`.
 - `runtime/PaddleFleet/src/` — **third-party.** A vendored, unmodified copy of
   the open-source PaddleFleet library, from the `mtp_reuse_last_layer` branch at
   commit `32e7980`, Apache 2.0. See `runtime/README.md`. It is left exactly as
-  upstream wrote it, identifiers included, so it stays diffable against the
-  original; the anonymisation applied elsewhere in this repository stops at this
-  boundary.
+  upstream wrote it, so it stays diffable against the original.
 - `src/fleet_model/target/` — first-party. The provider the Paddle evaluator
   constructs the model through, written against the PaddleFormers provider
   pattern. Included so the Paddle side runs from this tree alone.
@@ -60,12 +58,10 @@ SpecBench format that the accepted-length runs behind Figure 1b used.
 ## A note on identifiers
 
 The model classes here are named `Target*` and the config declares
-`model_type = "echo_target"`. The internal family name they carried has been
-replaced throughout, the same substitution the rest of this repository applies
-to paths and hostnames, and the released checkpoints' `config.json` declares the
-same names. `torch_weight_loader.build_and_load_torch` constructs the config and
-the model directly rather than going through `AutoConfig` / `AutoModel`, so it
-does not read `model_type` or `architectures` from the checkpoint. `AutoConfig`
+`model_type = "echo_target"`; the released checkpoints' `config.json` declares
+the same names. `torch_weight_loader.build_and_load_torch` constructs the config
+and the model directly rather than going through `AutoConfig` / `AutoModel`, so
+it does not read `model_type` or `architectures` from the checkpoint. `AutoConfig`
 reads the released configs once `TargetConfig` is registered under
 `echo_target`, but the weights must still go through `build_and_load_torch`:
 their key names are the export's, not the module tree's.
