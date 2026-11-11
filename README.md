@@ -75,14 +75,10 @@ tokenizers carry the SFT chat template, so
 as the script's `--chat-format target_chatv2`, and their generation config also
 stops on `<|im_end|>` (id 8).
 
-Only `config.json` was edited. It declares the public class names
+Only `config.json` was edited: it declares the public class names
 (`model_type: echo_target`, `TargetForCausalLM`; see
-`paddle_hf_alignment/README.md`), and MTP-1's `mtp_reuse_last_layer` is now
-`false`: its export said `true`, but MTP-1's depth layer is its own, not a copy
-of layer 23. The loader below builds every depth from its own weights whatever
-the flag says, as it did for the paper's measurements, so no output changes.
-Only `preserve_mtp_sharing=True` reads the flag; with the old value it would
-have run MTP-1's draft through layer 23, and now it raises an error.
+`paddle_hf_alignment/README.md`), and MTP-1's `mtp_reuse_last_layer` is `false`,
+because its depth layer is its own rather than a copy of layer 23.
 
 ```bash
 gh release download ckpt-echo-1.5 -R ernie-research/ECHO -D ckpts/echo-1.5
