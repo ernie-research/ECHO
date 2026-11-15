@@ -137,24 +137,25 @@ ones it was trained with:
 
 `paddle_hf_alignment/eval/eval_stochastic_hf.py` decodes with a checkpoint's
 own MTP heads at any draft depth `--K` and reports the acceptance rate at each
-depth (`per_step_accept`) and the accepted length. The rates behind Figure 1b
-come from this script at `--K 6 --max-new 256`, greedy, pooled over GSM8K,
-MATH500 and HumanEval in the SpecBench prompt format
-(`paddle_hf_alignment/data/specbench/`): the first 50 prompts of each set for
-ECHO-1.5(3), the first 500 for ECHO-1 and MTP-1 (HumanEval has 164).
+depth (`per_step_accept`) and the accepted length. Figure 1b comes from this
+script at `--K 6 --max-new 256`, greedy, pooled over GSM8K, MATH500 and
+HumanEval in the SpecBench prompt format (`paddle_hf_alignment/data/specbench/`):
+the first 50 prompts of each set, the first 500 for ECHO-1 and MTP-1 (HumanEval
+has 164).
 
-| | trained depths | depth 1 | 2 | 3 | 4 | 5 | 6 | accepted length, K=6 |
+Accepted length at serving depth K, as plotted in Figure 1b:
+
+| | trained depths | K=1 | 2 | 3 | 4 | 5 | 6 | 7 |
 |---|---|---|---|---|---|---|---|---|
-| ECHO-1.5(3) | 1–3 | 0.927 | 0.905 | 0.896 | 0.882 | 0.861 | 0.837 | 5.23 |
-| ECHO-1 | 1 | 0.926 | 0.618 | 0.393 | 0.300 | 0.330 | 0.527 | 2.82 |
-| MTP-1 | 1 | 0.938 | 0.100 | 0.059 | 0.049 | 0.000 | – | 2.04 |
+| MTP-1 | 1 | 1.94 | 2.03 | 2.04 | 2.04 | 2.04 | 2.04 | 2.04 |
+| MTP-3 | 1–3 | 1.92 | 2.76 | 3.53 | 4.04 | 4.28 | 4.38 | 4.42 |
+| ECHO-1 | 1 | 1.93 | 2.50 | 2.72 | 2.79 | 2.81 | 2.82 | 2.83 |
+| ECHO-1.5(3) | 1–3 | 1.93 | 2.77 | 3.52 | 4.18 | 4.75 | 5.23 | 5.62 |
+| ECHO-3 | 1–3 | 1.93 | 2.75 | 3.50 | 4.18 | 4.78 | 5.31 | 5.78 |
 
-The rate at depth k counts only the rounds in which depths 1 to k-1 were
-accepted, so the deep entries rest on few rounds: MTP-1 reaches depth 4 in 658
-of 118,691 rounds and depth 6 in none, ECHO-1 reaches depth 6 in 1,941 of
-87,379. These runs predate the loader keeping the routers in fp32: their router
-biases, weights and scaling factors were rounded to bf16, so the current code
-will not reproduce the digits exactly.
+These runs predate the loader keeping the routers in fp32: their router biases,
+weights and scaling factors were rounded to bf16, so the current code will not
+reproduce the digits exactly.
 
 ```bash
 cd paddle_hf_alignment && mkdir -p results
@@ -168,6 +169,27 @@ done
 
 `--temp 1e-6` is greedy (argmax). Add `--chat-format target_chatv2` for the
 instruct checkpoints.
+
+Measured on 1,000 real-world multi-turn conversations (46,544 requests) with a
+280B-A14B model at step 9,600 of mid-training, by which point it follows
+instructions. Both drafters are trained together with the main model over these
+9,600 steps: ECHO is the MTP module, trained on depths 1–3; DSpark is a block-7
+drafter that reads the main model's features through a stop-gradient, so it
+does not change the main model, and the two checkpoints share the same main
+model. A DSpark drafter is usually trained on a small fine-tuning set; this one
+sees the full mid-training data, as ECHO does. Each round ECHO drafts 7 tokens
+and DSpark one block of 7; both are served in SGLang:
+
+| sampling | drafter | depth 1 | 2 | 3 | 4 | 5 | 6 | 7 | accepted length |
+|---|---|---|---|---|---|---|---|---|---|
+| greedy | ECHO | 0.894 | 0.890 | 0.890 | 0.890 | 0.889 | 0.879 | 0.870 | 5.51 |
+| greedy | DSpark | 0.862 | 0.835 | 0.829 | 0.829 | 0.832 | 0.835 | 0.835 | 4.71 |
+| T=0.6, top-p 0.95 | ECHO | 0.886 | 0.881 | 0.879 | 0.880 | 0.878 | 0.868 | 0.857 | 5.34 |
+| T=0.6, top-p 0.95 | DSpark | 0.856 | 0.825 | 0.819 | 0.821 | 0.824 | 0.827 | 0.826 | 4.60 |
+| T=1 | ECHO | 0.837 | 0.839 | 0.839 | 0.840 | 0.838 | 0.829 | 0.821 | 4.66 |
+| T=1 | DSpark | 0.799 | 0.768 | 0.772 | 0.785 | 0.799 | 0.808 | 0.811 | 3.99 |
+
+The rate at depth k counts the rounds in which depths 1 to k-1 were accepted.
 
 ## Contents
 
